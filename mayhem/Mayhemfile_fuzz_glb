@@ -1,0 +1,9 @@
+project: savantenvs/gltf-sdk
+target: fuzz_glb
+testsuite:
+  - https://$MAYHEM_DOMAIN/$MAYHEM_PROJECT/$MAYHEM_TARGET/testsuite.tar
+  - file://mayhem/fuzz_glb/testsuite
+cmds:
+  - cmd: /mayhem/fuzz_glb
+    libfuzzer: true
+    dictionary: /mayhem/fuzz_glb.dict

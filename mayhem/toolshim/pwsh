@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#
+# mayhem/toolshim/pwsh -- a fake `pwsh` on PATH, used ONLY to satisfy
+# GLTFSDK/CMakeLists.txt's find_program(POWERSHELL_PATH NAMES pwsh powershell ...): without a
+# hit, that variable caches as `POWERSHELL_PATH-NOTFOUND`, and the add_custom_command that
+# generates GLTFSDK/Source's SchemaJson.h literally tries to execute the string
+# "POWERSHELL_PATH-NOTFOUND" and fails the build. The base image ships no real PowerShell (and
+# installing one just to run a ~250-line text-templating script is unnecessary weight), so
+# mayhem/build.sh puts this directory first on PATH instead -- see the header comment in
+# mayhem/gen_schema_json.py for the reasoning and for exactly what code this replaces.
+#
+# Upstream invokes this (verbatim, from GLTFSDK/CMakeLists.txt) as:
+#   pwsh -ExecutionPolicy Bypass <repo>/GLTFSDK/GenerateSchemaJsonHeader.ps1 -outPath <dir>
+# We ignore every argument except -outPath and hand off to the real (Python) generator.
+set -euo pipefail
+
+outPath=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -outPath)
+      outPath="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$outPath" ]; then
+  echo "mayhem/toolshim/pwsh: no -outPath argument given (args were: $*)" >&2
+  exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+exec python3 "$REPO_ROOT/mayhem/gen_schema_json.py" "$REPO_ROOT/GLTFSDK/schema" "$outPath/SchemaJson.h"
